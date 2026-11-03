@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import numpy as np
 
 st.set_page_config(page_title="Monitor B3", layout="wide")
 
@@ -15,7 +16,7 @@ st.sidebar.header("🔐 Identificação")
 nome_usuario = st.sidebar.selectbox("Selecione o Usuário:", list(usuarios_planilhas.keys()))
 id_planilha = usuarios_planilhas[nome_usuario]
 
-# Função para carregar e calcular os dados do Google Sheets
+# Função para carregar e calcular os dados do Google Sheets de forma segura
 @st.cache_data(ttl=300)
 def carregar_e_processar_dados(sheet_id):
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=HISTORICO_B3"
@@ -41,8 +42,16 @@ def carregar_e_processar_dados(sheet_id):
         
         col_base = 'Valor_Descoberto' if 'Valor_Descoberto' in df.columns else 'Valor_Coberto'
         if col_base in df.columns:
+            # 1. Variação Financeira (D x D-1) com suporte a valores negativos/positivos
             df['Variacao_Financeira'] = df.groupby('Codigo')[col_base].diff().round(2)
-            df['Variacao_Percentual'] = df.groupby('Codigo')[col_base].pct_change().mul(100).round(2)
+            
+            # 2. Variação Percentual tratada para evitar divisão por zero (Infinito)
+            val_anterior = df.groupby('Codigo')[col_base].shift(1)
+            dif = df['Variacao_Financeira']
+            
+            # Se o anterior for 0 ou NaN, a variação percentual vira 0, senão calcula normalmente
+            pct = np.where((val_anterior == 0) | (val_anterior.isna()), 0, (dif / val_anterior) * 100)
+            df['Variacao_Percentual'] = pd.Series(pct, index=df.index).round(2)
             
     return df
 
@@ -138,7 +147,7 @@ try:
 
     st.markdown("---")
     
-    # --- TOP 10 DESTAQUES (BARRAS HORIZONTAIS) ---
+    # --- TOP 10 DESTAQUES (BARRAS HORIZONTAIS + TABELAS DE APOIO) ---
     st.subheader("🔥 Top 10 — Maiores Variações do Último Pregão")
     
     col_t1, col_t2 = st.columns(2)
@@ -160,6 +169,10 @@ try:
             )
             fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='outside')
             st.plotly_chart(fig_fin, use_container_width=True)
+            
+            # Tabela Top 10 Financeira
+            st.markdown("📋 *Detalhamento — Top 10 Financeiro*")
+            st.dataframe(top10_fin[['Ativo_Formatado', 'Variacao_Financeira']].reset_index(drop=True), use_container_width=True)
         else:
             st.info("Dados insuficientes para calcular a variação financeira.")
             
@@ -180,17 +193,12 @@ try:
             )
             fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='outside')
             st.plotly_chart(fig_pct, use_container_width=True)
+            
+            # Tabela Top 10 Percentual
+            st.markdown("📋 *Detalhamento — Top 10 Percentual*")
+            st.dataframe(top10_pct[['Ativo_Formatado', 'Variacao_Percentual']].reset_index(drop=True), use_container_width=True)
         else:
             st.info("Dados insuficientes para calcular a variação percentual.")
-
-    st.markdown("---")
-    
-    # --- ANÁLISE DETALHADA — TABELA COMPLETA (Renderizada em HTML seguro) ---
-    st.subheader("📋 Análise Detalhada — Todas as Opções (Tabela Completa)")
-    st.markdown("Acompanhe abaixo a consolidação completa com todas as colunas calculadas e comparativos.")
-    
-    # Converte o DataFrame para HTML puro, evitando completamente o erro de módulo dinâmico do st.dataframe
-    st.markdown(df.to_html(classes='table table-striped', index=False), unsafe_allow_html=True)
 
 except Exception as e:
     st.error(f"Erro ao processar os dados: {e}")
