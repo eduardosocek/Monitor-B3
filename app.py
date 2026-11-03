@@ -42,15 +42,15 @@ def carregar_e_processar_dados(sheet_id):
         
         col_base = 'Valor_Descoberto' if 'Valor_Descoberto' in df.columns else 'Valor_Coberto'
         if col_base in df.columns:
-            # 1. Variação Financeira (D x D-1) com suporte a valores negativos/positivos
+            # 1. Variação Financeira (D x D-1)
             df['Variacao_Financeira'] = df.groupby('Codigo')[col_base].diff().round(2)
             
-            # 2. Variação Percentual tratada para evitar divisão por zero (Infinito)
+            # 2. Variação Percentual tratada (evita divisão por zero e distorções absurdas em centavos)
             val_anterior = df.groupby('Codigo')[col_base].shift(1)
             dif = df['Variacao_Financeira']
             
-            # Se o anterior for 0 ou NaN, a variação percentual vira 0, senão calcula normalmente
-            pct = np.where((val_anterior == 0) | (val_anterior.isna()), 0, (dif / val_anterior) * 100)
+            # Se o anterior for muito baixo (< 1.00) ou zero, tratamos o percentual para evitar estouro de 10.000%
+            pct = np.where((val_anterior <= 0.1) | (val_anterior.isna()), 0, (dif / val_anterior) * 100)
             df['Variacao_Percentual'] = pd.Series(pct, index=df.index).round(2)
             
     return df
@@ -147,7 +147,7 @@ try:
 
     st.markdown("---")
     
-    # --- TOP 10 DESTAQUES (BARRAS HORIZONTAIS + TABELAS DE APOIO) ---
+    # --- TOP 10 DESTAQUES (BARRAS HORIZONTAIS + TABELA ESTÁTICA SEGURA) ---
     st.subheader("🔥 Top 10 — Maiores Variações do Último Pregão")
     
     col_t1, col_t2 = st.columns(2)
@@ -170,9 +170,10 @@ try:
             fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='outside')
             st.plotly_chart(fig_fin, use_container_width=True)
             
-            # Tabela Top 10 Financeira
+            # Tabela Estática Segura (Substitui o dataframe dinâmico para evitar erros)
             st.markdown("📋 *Detalhamento — Top 10 Financeiro*")
-            st.dataframe(top10_fin[['Ativo_Formatado', 'Variacao_Financeira']].reset_index(drop=True), use_container_width=True)
+            df_tabela_fin = top10_fin[['Ativo_Formatado', 'Variacao_Financeira']].reset_index(drop=True)
+            st.table(df_tabela_fin)
         else:
             st.info("Dados insuficientes para calcular a variação financeira.")
             
@@ -194,9 +195,10 @@ try:
             fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='outside')
             st.plotly_chart(fig_pct, use_container_width=True)
             
-            # Tabela Top 10 Percentual
+            # Tabela Estática Segura
             st.markdown("📋 *Detalhamento — Top 10 Percentual*")
-            st.dataframe(top10_pct[['Ativo_Formatado', 'Variacao_Percentual']].reset_index(drop=True), use_container_width=True)
+            df_tabela_pct = top10_pct[['Ativo_Formatado', 'Variacao_Percentual']].reset_index(drop=True)
+            st.table(df_tabela_pct)
         else:
             st.info("Dados insuficientes para calcular a variação percentual.")
 
