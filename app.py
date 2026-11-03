@@ -39,10 +39,11 @@ def carregar_e_processar_dados(sheet_id):
         df['Data_Pregao'] = pd.to_datetime(df['Data_Pregao'], errors='coerce')
         df = df.sort_values(by=['Codigo', 'Data_Pregao'])
         
-        # CONSTRUIR AS INFORMAÇÕES DE VARIAÇÃO (D x D-1)
-        if 'Valor_Coberto' in df.columns:
-            df['Variacao_Financeira'] = df.groupby('Codigo')['Valor_Coberto'].diff().round(2)
-            df['Variacao_Percentual'] = df.groupby('Codigo')['Valor_Coberto'].pct_change().mul(100).round(2)
+        # Construir variações com base no valor descoberto ou coberto
+        col_base = 'Valor_Descoberto' if 'Valor_Descoberto' in df.columns else 'Valor_Coberto'
+        if col_base in df.columns:
+            df['Variacao_Financeira'] = df.groupby('Codigo')[col_base].diff().round(2)
+            df['Variacao_Percentual'] = df.groupby('Codigo')[col_base].pct_change().mul(100).round(2)
             
     return df
 
@@ -63,13 +64,25 @@ try:
     
     st.markdown("---")
     
+    # --- CRIAR RÓTULO PERSONALIZADO (Ex: PETRA1 (R$ 15,00)) ---
+    if 'Codigo' in df.columns and 'Exercicio' in df.columns:
+        # Pega o último exercício de cada ativo para formatar o seletor
+        df_ultimos_ativos = df.drop_duplicates(subset=['Codigo'], keep='last')
+        mapa_rotulos = {
+            row['Codigo']: f"{row['Codigo']} (R$ {row['Exercicio']:,.2f})"
+            for _, row in df_ultimos_ativos.iterrows()
+        }
+        df['Ativo_Formatado'] = df['Codigo'].map(mapa_rotulos)
+    else:
+        df['Ativo_Formatado'] = df['Codigo']
+        
     # --- FILTRO / SELETOR DE ATIVO PRINCIPAL ---
-    codigos_disponiveis = df['Codigo'].unique().tolist() if 'Codigo' in df.columns else []
+    lista_opcoes = df['Ativo_Formatado'].unique().tolist() if 'Ativo_Formatado' in df.columns else []
     
     st.sidebar.subheader("Filtro de Ativo")
-    opcao_selecionada = st.sidebar.selectbox("Selecione a Opção / Ativo:", codigos_disponiveis)
+    opcao_selecionada = st.sidebar.selectbox("Selecione a Opção / Ativo:", lista_opcoes)
     
-    df_filtrado = df[df['Codigo'] == opcao_selecionada] if 'Codigo' in df.columns else pd.DataFrame()
+    df_filtrado = df[df['Ativo_Formatado'] == opcao_selecionada] if 'Ativo_Formatado' in df.columns else pd.DataFrame()
     
     # --- CARTÕES / MÉTRICAS DO ATIVO SELECIONADO ---
     st.subheader(f"📊 Painel do Ativo Selecionado: {opcao_selecionada}")
@@ -89,53 +102,41 @@ try:
         c3.metric("Preço de Exercício (Strike)", f"R$ {exercicio:,.2f}" if pd.notna(exercicio) else "R$ 0,00")
         c4.metric("Data Ref.", data_ref_str)
         
-        # Gráfico de Evolução Temporal do Ativo Selecionado
+        # Gráfico de Evolução Temporal (Apenas Valor Descoberto e Strike)
         if 'Data_Pregao' in df_filtrado.columns:
-            colunas_grafico = [c for c in ['Valor_Coberto', 'Valor_Descoberto', 'Exercicio'] if c in df_filtrado.columns]
+            colunas_grafico = [c for c in ['Valor_Descoberto', 'Exercicio'] if c in df_filtrado.columns]
             fig_evolucao = px.line(
                 df_filtrado,
                 x='Data_Pregao',
                 y=colunas_grafico,
                 markers=True,
-                title=f"Evolução Temporal (Coberto, Descoberto e Strike) — {opcao_selecionada}",
+                title=f"Evolução Temporal (Valor Descoberto e Strike) — {opcao_selecionada}",
                 labels={'value': 'Valor (R$)', 'Data_Pregao': 'Data do Pregão', 'variable': 'Métrica'}
             )
             st.plotly_chart(fig_evolucao, use_container_width=True)
             
     st.markdown("---")
     
-    # --- EVOLUÇÃO TEMPORAL — TOP 10 ATIVOS ---
-    st.subheader("📈 Evolução Temporal — Top 10 Maiores Valores")
+    # --- EVOLUÇÃO TEMPORAL — TOP 10 VALOR DESCOBERTO ---
+    st.subheader("📈 Evolução Temporal — Top 10 Maiores Valores Descobertos")
     
     max_dt = df['Data_Pregao'].max()
     df_ultimo = df[df['Data_Pregao'] == max_dt] if 'Data_Pregao' in df.columns else df
     
-    if 'Valor_Coberto' in df_ultimo.columns:
-        top10_codigos = df_ultimo.nlargest(10, 'Valor_Coberto')['Codigo'].tolist()
+    if 'Valor_Descoberto' in df_ultimo.columns:
+        top10_codigos = df_ultimo.nlargest(10, 'Valor_Descoberto')['Codigo'].tolist()
         df_top10_temporal = df[df['Codigo'].isin(top10_codigos)]
         
-        fig_top10_temp = px.line(
+        fig_top10_desc = px.line(
             df_top10_temporal,
             x='Data_Pregao',
-            y='Valor_Coberto',
-            color='Codigo',
+            y='Valor_Descoberto',
+            color='Ativo_Formatado',
             markers=True,
-            title="Evolução Temporal do Valor Coberto — Top 10 Ativos",
-            labels={'Valor_Coberto': 'Valor Coberto (R$)', 'Data_Pregao': 'Data do Pregão', 'Codigo': 'Ativo'}
+            title="Evolução Temporal do Valor Descoberto — Top 10 Ativos",
+            labels={'Valor_Descoberto': 'Valor Descoberto (R$)', 'Data_Pregao': 'Data do Pregão', 'Ativo_Formatado': 'Ativo'}
         )
-        st.plotly_chart(fig_top10_temp, use_container_width=True)
-        
-        if 'Valor_Descoberto' in df_top10_temporal.columns:
-            fig_top10_desc = px.line(
-                df_top10_temporal,
-                x='Data_Pregao',
-                y='Valor_Descoberto',
-                color='Codigo',
-                markers=True,
-                title="Evolução Temporal do Valor Descoberto — Top 10 Ativos",
-                labels={'Valor_Descoberto': 'Valor Descoberto (R$)', 'Data_Pregao': 'Data do Pregão', 'Codigo': 'Ativo'}
-            )
-            st.plotly_chart(fig_top10_desc, use_container_width=True)
+        st.plotly_chart(fig_top10_desc, use_container_width=True)
 
     st.markdown("---")
     
@@ -152,12 +153,12 @@ try:
             fig_fin = px.bar(
                 top10_fin,
                 x='Variacao_Financeira',
-                y='Codigo',
+                y='Ativo_Formatado',
                 orientation='h',
                 text='Variacao_Financeira',
                 color='Variacao_Financeira',
                 color_continuous_scale='RdBu',
-                labels={'Variacao_Financeira': 'Variação (R$)', 'Codigo': 'Ativo'}
+                labels={'Variacao_Financeira': 'Variação (R$)', 'Ativo_Formatado': 'Ativo'}
             )
             fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='outside')
             st.plotly_chart(fig_fin, use_container_width=True)
@@ -172,12 +173,12 @@ try:
             fig_pct = px.bar(
                 top10_pct,
                 x='Variacao_Percentual',
-                y='Codigo',
+                y='Ativo_Formatado',
                 orientation='h',
                 text='Variacao_Percentual',
                 color='Variacao_Percentual',
                 color_continuous_scale='Greens',
-                labels={'Variacao_Percentual': 'Variação (%)', 'Codigo': 'Ativo'}
+                labels={'Variacao_Percentual': 'Variação (%)', 'Ativo_Formatado': 'Ativo'}
             )
             fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='outside')
             st.plotly_chart(fig_pct, use_container_width=True)
