@@ -39,7 +39,6 @@ def carregar_e_processar_dados(sheet_id):
         df['Data_Pregao'] = pd.to_datetime(df['Data_Pregao'], errors='coerce')
         df = df.sort_values(by=['Codigo', 'Data_Pregao'])
         
-        # Construir variações com base no valor descoberto ou coberto
         col_base = 'Valor_Descoberto' if 'Valor_Descoberto' in df.columns else 'Valor_Coberto'
         if col_base in df.columns:
             df['Variacao_Financeira'] = df.groupby('Codigo')[col_base].diff().round(2)
@@ -66,7 +65,6 @@ try:
     
     # --- CRIAR RÓTULO PERSONALIZADO (Ex: PETRA1 (R$ 15,00)) ---
     if 'Codigo' in df.columns and 'Exercicio' in df.columns:
-        # Pega o último exercício de cada ativo para formatar o seletor
         df_ultimos_ativos = df.drop_duplicates(subset=['Codigo'], keep='last')
         mapa_rotulos = {
             row['Codigo']: f"{row['Codigo']} (R$ {row['Exercicio']:,.2f})"
@@ -187,11 +185,12 @@ try:
 
     st.markdown("---")
     
-    # --- ANÁLISE DETALHADA — TABELA COMPLETA ---
+    # --- ANÁLISE DETALHADA — TABELA COMPLETA (Usando st.write seguro) ---
     st.subheader("📋 Análise Detalhada — Todas as Opções (Tabela Completa)")
     st.markdown("Acompanhe abaixo a consolidação completa com todas as colunas calculadas e comparativos.")
     
-    st.dataframe(df, use_container_width=True)
+    # Usando st.write para renderizar a tabela de forma robusta sem erros de módulos estáticos
+    st.write(df)
 
 except Exception as e:
     st.error(f"Erro ao processar os dados: {e}")
