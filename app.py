@@ -72,7 +72,7 @@ try:
     df_filtrado = df[df['Codigo'] == opcao_selecionada] if 'Codigo' in df.columns else pd.DataFrame()
     
     # --- CARTÕES / MÉTRICAS DO ATIVO SELECIONADO ---
-    st.subheader(f"📊 Painel do Ativo: {opcao_selecionada}")
+    st.subheader(f"📊 Painel do Ativo Selecionado: {opcao_selecionada}")
     
     if not df_filtrado.empty:
         ultimo_registro = df_filtrado.iloc[-1]
@@ -89,7 +89,7 @@ try:
         c3.metric("Preço de Exercício (Strike)", f"R$ {exercicio:,.2f}" if pd.notna(exercicio) else "R$ 0,00")
         c4.metric("Data Ref.", data_ref_str)
         
-        # Gráfico de Evolução Temporal (Ativo + Preço / Strike)
+        # Gráfico de Evolução Temporal do Ativo Selecionado
         if 'Data_Pregao' in df_filtrado.columns:
             colunas_grafico = [c for c in ['Valor_Coberto', 'Valor_Descoberto', 'Exercicio'] if c in df_filtrado.columns]
             fig_evolucao = px.line(
@@ -97,36 +97,69 @@ try:
                 x='Data_Pregao',
                 y=colunas_grafico,
                 markers=True,
-                title=f"Evolução Temporal e Preços — {opcao_selecionada}",
+                title=f"Evolução Temporal (Coberto, Descoberto e Strike) — {opcao_selecionada}",
                 labels={'value': 'Valor (R$)', 'Data_Pregao': 'Data do Pregão', 'variable': 'Métrica'}
             )
             st.plotly_chart(fig_evolucao, use_container_width=True)
             
     st.markdown("---")
     
-    # --- TOP 10 DESTAQUES (CONSTRUÍDOS VIA CÓDIGO) ---
-    st.subheader("🔥 Top 10 — Maiores Variações do Último Pregão")
+    # --- EVOLUÇÃO TEMPORAL — TOP 10 ATIVOS ---
+    st.subheader("📈 Evolução Temporal — Top 10 Maiores Valores")
     
-    # Filtrar apenas registros do último pregão disponível
     max_dt = df['Data_Pregao'].max()
     df_ultimo = df[df['Data_Pregao'] == max_dt] if 'Data_Pregao' in df.columns else df
+    
+    if 'Valor_Coberto' in df_ultimo.columns:
+        top10_codigos = df_ultimo.nlargest(10, 'Valor_Coberto')['Codigo'].tolist()
+        df_top10_temporal = df[df['Codigo'].isin(top10_codigos)]
+        
+        fig_top10_temp = px.line(
+            df_top10_temporal,
+            x='Data_Pregao',
+            y='Valor_Coberto',
+            color='Codigo',
+            markers=True,
+            title="Evolução Temporal do Valor Coberto — Top 10 Ativos",
+            labels={'Valor_Coberto': 'Valor Coberto (R$)', 'Data_Pregao': 'Data do Pregão', 'Codigo': 'Ativo'}
+        )
+        st.plotly_chart(fig_top10_temp, use_container_width=True)
+        
+        if 'Valor_Descoberto' in df_top10_temporal.columns:
+            fig_top10_desc = px.line(
+                df_top10_temporal,
+                x='Data_Pregao',
+                y='Valor_Descoberto',
+                color='Codigo',
+                markers=True,
+                title="Evolução Temporal do Valor Descoberto — Top 10 Ativos",
+                labels={'Valor_Descoberto': 'Valor Descoberto (R$)', 'Data_Pregao': 'Data do Pregão', 'Codigo': 'Ativo'}
+            )
+            st.plotly_chart(fig_top10_desc, use_container_width=True)
+
+    st.markdown("---")
+    
+    # --- TOP 10 DESTAQUES (BARRAS HORIZONTAIS) ---
+    st.subheader("🔥 Top 10 — Maiores Variações do Último Pregão")
     
     col_t1, col_t2 = st.columns(2)
     
     with col_t1:
         st.markdown("**Maiores Variações Financeiras (Top 10)**")
         if 'Variacao_Financeira' in df_ultimo.columns and not df_ultimo['Variacao_Financeira'].isna().all():
-            top10_fin = df_ultimo.dropna(subset=['Variacao_Financeira']).nlargest(10, 'Variacao_Financeira')
+            top10_fin = df_ultimo.dropna(subset=['Variacao_Financeira']).sort_values(by='Variacao_Financeira', ascending=True).tail(10)
+            
             fig_fin = px.bar(
                 top10_fin,
-                x='Codigo',
-                y='Variacao_Financeira',
+                x='Variacao_Financeira',
+                y='Codigo',
+                orientation='h',
                 text='Variacao_Financeira',
                 color='Variacao_Financeira',
                 color_continuous_scale='RdBu',
                 labels={'Variacao_Financeira': 'Variação (R$)', 'Codigo': 'Ativo'}
             )
-            fig_fin.update_traces(texttemplate='R$ %{text:.2f}', textposition='outside')
+            fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='outside')
             st.plotly_chart(fig_fin, use_container_width=True)
         else:
             st.info("Dados insuficientes para calcular a variação financeira.")
@@ -134,17 +167,19 @@ try:
     with col_t2:
         st.markdown("**Maiores Variações Percentuais (Top 10)**")
         if 'Variacao_Percentual' in df_ultimo.columns and not df_ultimo['Variacao_Percentual'].isna().all():
-            top10_pct = df_ultimo.dropna(subset=['Variacao_Percentual']).nlargest(10, 'Variacao_Percentual')
+            top10_pct = df_ultimo.dropna(subset=['Variacao_Percentual']).sort_values(by='Variacao_Percentual', ascending=True).tail(10)
+            
             fig_pct = px.bar(
                 top10_pct,
-                x='Codigo',
-                y='Variacao_Percentual',
+                x='Variacao_Percentual',
+                y='Codigo',
+                orientation='h',
                 text='Variacao_Percentual',
                 color='Variacao_Percentual',
                 color_continuous_scale='Greens',
                 labels={'Variacao_Percentual': 'Variação (%)', 'Codigo': 'Ativo'}
             )
-            fig_pct.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
+            fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='outside')
             st.plotly_chart(fig_pct, use_container_width=True)
         else:
             st.info("Dados insuficientes para calcular a variação percentual.")
