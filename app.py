@@ -1,33 +1,29 @@
 import streamlit as st
 import pandas as pd
-import gspread
-from google.auth import default
 import plotly.express as px
 
 st.set_page_config(page_title="Monitor B3", layout="wide")
 
-st.title("?? Monitor B3 — Painel de Análise")
+st.title("📈 Monitor B3 — Painel de Análise")
 
 # --- DICIONÁRIO DE USUÁRIOS E PLANILHAS ---
-# Aqui você gerencia facilmente os 2 ou 3 usuários e os IDs das planilhas deles
 usuarios_planilhas = {
     "Eduardo (Principal)": "1tEjT52xO9lzoBdPE4rXKJyqowM_9Fi3x5bWc2oRw3eI",
     "Usuário 2": "COLOQUE_O_ID_DA_PLANILHA_DO_CLIENTE_2_AQUI",
     "Usuário 3": "COLOQUE_O_ID_DA_PLANILHA_DO_CLIENTE_3_AQUI"
 }
 
-st.sidebar.header("?? Identificação")
+st.sidebar.header("🔐 Identificação")
 nome_usuario = st.sidebar.selectbox("Selecione o Usuário:", list(usuarios_planilhas.keys()))
 id_planilha = usuarios_planilhas[nome_usuario]
 
-# Função para carregar e tratar os dados da planilha do usuário selecionado
+# Função para carregar os dados de forma pública via exportação CSV do Google Sheets
 @st.cache_data(ttl=300)
 def carregar_dados(sheet_id):
-    auth, _ = default()
-    cliente = gspread.authorize(auth)
-    planilha = cliente.open_by_key(sheet_id)
-    aba = planilha.worksheet("HISTORICO_B3")
-    df = pd.DataFrame(aba.get_all_records())
+    # URL de exportação pública da aba 'HISTORICO_B3' em formato CSV
+    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=HISTORICO_B3"
+    
+    df = pd.read_csv(url)
     
     # Tratamento de colunas financeiras
     colunas_financeiras = ['Valor_Coberto', 'Valor_Descoberto', 'Exercicio']
@@ -84,7 +80,7 @@ try:
     st.plotly_chart(fig_historico, use_container_width=True)
     
     # --- GRÁFICO TOP 10 ---
-    st.subheader("?? Top 10 Opções por Valor Coberto (Último Pregão)")
+    st.subheader("🔥 Top 10 Opções por Valor Coberto (Último Pregão)")
     
     ultima_data = df['Data_Pregao'].max()
     df_ultimo_pregao = df[df['Data_Pregao'] == ultima_data]
