@@ -100,7 +100,7 @@ try:
         c3.metric("Preço de Exercício (Strike)", f"R$ {exercicio:,.2f}" if pd.notna(exercicio) else "R$ 0,00")
         c4.metric("Data Ref.", data_ref_str)
         
-        # Gráfico de Evolução Temporal (Apenas Valor Descoberto e Strike)
+        # Gráfico de Evolução Temporal
         if 'Data_Pregao' in df_filtrado.columns:
             colunas_grafico = [c for c in ['Valor_Descoberto', 'Exercicio'] if c in df_filtrado.columns]
             fig_evolucao = px.line(
@@ -185,12 +185,12 @@ try:
 
     st.markdown("---")
     
-    # --- ANÁLISE DETALHADA — TABELA COMPLETA (Usando st.write seguro) ---
+    # --- ANÁLISE DETALHADA — TABELA COMPLETA (Renderizada em HTML seguro) ---
     st.subheader("📋 Análise Detalhada — Todas as Opções (Tabela Completa)")
     st.markdown("Acompanhe abaixo a consolidação completa com todas as colunas calculadas e comparativos.")
     
-    # Usando st.write para renderizar a tabela de forma robusta sem erros de módulos estáticos
-    st.write(df)
+    # Converte o DataFrame para HTML puro, evitando completamente o erro de módulo dinâmico do st.dataframe
+    st.markdown(df.to_html(classes='table table-striped', index=False), unsafe_allow_html=True)
 
 except Exception as e:
     st.error(f"Erro ao processar os dados: {e}")
