@@ -5,17 +5,20 @@ import numpy as np
 
 st.set_page_config(page_title="Monitor B3", layout="wide")
 
-# --- CONTROLE DE SENHA SIMPLES (SOLUÇÃO DE ACESSO TEMPORÁRIO) ---
-st.sidebar.header("🔐 Segurança de Acesso")
-senha_digitada = st.sidebar.text_input("Digite a senha de acesso:", type="password")
-SENHA_MESTRE = "monitor123"  # Você pode alterar esta senha quando quiser!
+# --- CONTROLE DE SENHA SIMPLES (USANDO CAMPOS NATIVOS SEGUROS) ---
+st.title("🔐 SA INTELIGÊNCIA EM DADOS | B3 MONITOR")
+st.markdown("---")
+
+senha_digitada = st.text_input("Digite a senha de acesso para liberar o painel:", type="password")
+SENHA_MESTRE = "monitor123"
 
 if senha_digitada != SENHA_MESTRE:
-    st.info("📌 **SA INTELIGÊNCIA EM DADOS | B3 MONITOR**")
-    st.warning("⚠️ **Acesso Restrito:** Por favor, digite a senha correta na barra lateral para carregar o painel.")
-    st.stop()  # Interrompe a execução até que a senha seja inserida corretamente
+    if senha_digitada != "":
+        st.error("❌ Senha incorreta. Tente novamente.")
+    st.warning("⚠️ **Acesso Restrito:** Insira a senha acima para visualizar o monitor.")
+    st.stop()
 
-st.sidebar.success("✅ Acesso Liberado!")
+st.success("✅ Acesso Liberado com Sucesso!")
 
 # --- DICIONÁRIO DE USUÁRIOS E PLANILHAS ---
 usuarios_planilhas = {
@@ -24,7 +27,7 @@ usuarios_planilhas = {
     "Usuário 3": "COLOQUE_O_ID_DA_PLANILHA_DO_CLIENTE_3_AQUI"
 }
 
-st.sidebar.header("👤 Identificação")
+st.sidebar.header("👤 Configurações")
 nome_usuario = st.sidebar.selectbox("Selecione o Usuário:", list(usuarios_planilhas.keys()))
 id_planilha = usuarios_planilhas[nome_usuario]
 
@@ -54,10 +57,7 @@ def carregar_e_processar_dados(sheet_id):
         
         col_base = 'Valor_Descoberto' if 'Valor_Descoberto' in df.columns else 'Valor_Coberto'
         if col_base in df.columns:
-            # 1. Variação Financeira (D x D-1) com suporte a valores negativos/positivos
             df['Variacao_Financeira'] = df.groupby('Codigo')[col_base].diff().round(2)
-            
-            # 2. Variação Percentual tratada para evitar divisão por zero e estouros
             val_anterior = df.groupby('Codigo')[col_base].shift(1)
             dif = df['Variacao_Financeira']
             pct = np.where((val_anterior <= 0.1) | (val_anterior.isna()), 0, (dif / val_anterior) * 100)
@@ -68,9 +68,6 @@ def carregar_e_processar_dados(sheet_id):
 try:
     df = carregar_e_processar_dados(id_planilha)
     st.sidebar.success(f"Base carregada para: {nome_usuario}")
-    
-    # --- CABEÇALHO PADRÃO STREAMLIT ---
-    st.info("📌 **SA INTELIGÊNCIA EM DADOS | B3 MONITOR**")
     
     ultima_data = df['Data_Pregao'].max().strftime('%d/%m/%Y') if 'Data_Pregao' in df.columns and not df['Data_Pregao'].isna().all() else "N/A"
     total_pregoes = df['Data_Pregao'].nunique() if 'Data_Pregao' in df.columns else 0
@@ -119,7 +116,6 @@ try:
         c3.metric("Preço de Exercício (Strike)", f"R$ {exercicio:,.2f}" if pd.notna(exercicio) else "R$ 0,00")
         c4.metric("Data Ref.", data_ref_str)
         
-        # Gráfico de Evolução Temporal (Apenas Valor Descoberto e Strike)
         if 'Data_Pregao' in df_filtrado.columns:
             colunas_grafico = [c for c in ['Valor_Descoberto', 'Exercicio'] if c in df_filtrado.columns]
             fig_evolucao = px.line(
