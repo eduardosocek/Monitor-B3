@@ -6,21 +6,21 @@ import plotly.express as px
 
 st.set_page_config(page_title="Monitor B3", layout="wide")
 
-st.title("?? Monitor B3 ó Painel de An·lise")
+st.title("?? Monitor B3 ‚Äî Painel de An√°lise")
 
-# --- DICION¡RIO DE USU¡RIOS E PLANILHAS ---
-# Aqui vocÍ gerencia facilmente os 2 ou 3 usu·rios e os IDs das planilhas deles
+# --- DICION√ÅRIO DE USU√ÅRIOS E PLANILHAS ---
+# Aqui voc√™ gerencia facilmente os 2 ou 3 usu√°rios e os IDs das planilhas deles
 usuarios_planilhas = {
     "Eduardo (Principal)": "1tEjT52xO9lzoBdPE4rXKJyqowM_9Fi3x5bWc2oRw3eI",
-    "Usu·rio 2": "COLOQUE_O_ID_DA_PLANILHA_DO_CLIENTE_2_AQUI",
-    "Usu·rio 3": "COLOQUE_O_ID_DA_PLANILHA_DO_CLIENTE_3_AQUI"
+    "Usu√°rio 2": "COLOQUE_O_ID_DA_PLANILHA_DO_CLIENTE_2_AQUI",
+    "Usu√°rio 3": "COLOQUE_O_ID_DA_PLANILHA_DO_CLIENTE_3_AQUI"
 }
 
-st.sidebar.header("?? IdentificaÁ„o")
-nome_usuario = st.sidebar.selectbox("Selecione o Usu·rio:", list(usuarios_planilhas.keys()))
+st.sidebar.header("?? Identifica√ß√£o")
+nome_usuario = st.sidebar.selectbox("Selecione o Usu√°rio:", list(usuarios_planilhas.keys()))
 id_planilha = usuarios_planilhas[nome_usuario]
 
-# FunÁ„o para carregar e tratar os dados da planilha do usu·rio selecionado
+# Fun√ß√£o para carregar e tratar os dados da planilha do usu√°rio selecionado
 @st.cache_data(ttl=300)
 def carregar_dados(sheet_id):
     auth, _ = default()
@@ -39,10 +39,10 @@ def carregar_dados(sheet_id):
                                          .str.strip()
             df[col] = pd.to_numeric(df[col], errors='coerce').round(2)
             
-    # Garantir ordenaÁ„o por cÛdigo e data
+    # Garantir ordena√ß√£o por c√≥digo e data
     df = df.sort_values(by=['Codigo', 'Data_Pregao'])
     
-    # C·lculo da variaÁ„o di·ria (D x D-1)
+    # C√°lculo da varia√ß√£o di√°ria (D x D-1)
     df['Variacao_Coberto'] = df.groupby('Codigo')['Valor_Coberto'].diff().round(2)
     return df
 
@@ -53,38 +53,38 @@ try:
     # --- FILTROS ---
     st.sidebar.subheader("Filtros")
     codigos_disponiveis = df['Codigo'].unique().tolist()
-    opcao_selecionada = st.sidebar.selectbox("Selecione a OpÁ„o/Ativo:", codigos_disponiveis)
+    opcao_selecionada = st.sidebar.selectbox("Selecione a Op√ß√£o/Ativo:", codigos_disponiveis)
     
-    # Filtrar dados para o cÛdigo selecionado
+    # Filtrar dados para o c√≥digo selecionado
     df_filtrado = df[df['Codigo'] == opcao_selecionada]
     
-    # --- VISUALIZA«√O PRINCIPAL ---
+    # --- VISUALIZA√á√ÉO PRINCIPAL ---
     col1, col2, col3 = st.columns(3)
     
     ultimo_registro = df_filtrado.iloc[-1] if not df_filtrado.empty else None
     if ultimo_registro is not None:
-        col1.metric("⁄ltimo Valor Coberto", f"R$ {ultimo_registro['Valor_Coberto']:.2f}")
-        col2.metric("VariaÁ„o (D x D-1)", f"R$ {ultimo_registro['Variacao_Coberto']:.2f}")
+        col1.metric("√öltimo Valor Coberto", f"R$ {ultimo_registro['Valor_Coberto']:.2f}")
+        col2.metric("Varia√ß√£o (D x D-1)", f"R$ {ultimo_registro['Variacao_Coberto']:.2f}")
         if 'Exercicio' in df_filtrado.columns:
-            col3.metric("PreÁo de ExercÌcio (Strike)", f"R$ {ultimo_registro['Exercicio']:.2f}")
+            col3.metric("Pre√ßo de Exerc√≠cio (Strike)", f"R$ {ultimo_registro['Exercicio']:.2f}")
 
     st.markdown("---")
     
-    # --- GR¡FICO DE HIST”RICO COM VALOR DO ATIVO ---
-    st.subheader(f"EvoluÁ„o Temporal ó {opcao_selecionada}")
+    # --- GR√ÅFICO DE HIST√ìRICO COM VALOR DO ATIVO ---
+    st.subheader(f"Evolu√ß√£o Temporal ‚Äî {opcao_selecionada}")
     
     fig_historico = px.line(
         df_filtrado, 
         x='Data_Pregao', 
         y=['Valor_Coberto', 'Exercicio'],
-        labels={'value': 'Valor (R$)', 'Data_Pregao': 'Data do Preg„o', 'variable': 'MÈtrica'},
-        title=f"HistÛrico de Valor Coberto vs. PreÁo de ExercÌcio",
+        labels={'value': 'Valor (R$)', 'Data_Pregao': 'Data do Preg√£o', 'variable': 'M√©trica'},
+        title=f"Hist√≥rico de Valor Coberto vs. Pre√ßo de Exerc√≠cio",
         markers=True
     )
     st.plotly_chart(fig_historico, use_container_width=True)
     
-    # --- GR¡FICO TOP 10 ---
-    st.subheader("?? Top 10 OpÁıes por Valor Coberto (⁄ltimo Preg„o)")
+    # --- GR√ÅFICO TOP 10 ---
+    st.subheader("?? Top 10 Op√ß√µes por Valor Coberto (√öltimo Preg√£o)")
     
     ultima_data = df['Data_Pregao'].max()
     df_ultimo_pregao = df[df['Data_Pregao'] == ultima_data]
@@ -98,8 +98,8 @@ try:
         text='Valor_Coberto',
         color='Valor_Coberto',
         color_continuous_scale='Viridis',
-        labels={'Valor_Coberto': 'Valor Coberto (R$)', 'Codigo': 'CÛdigo da OpÁ„o'},
-        title=f"Top 10 OpÁıes mais movimentadas no Preg„o de {ultima_data}"
+        labels={'Valor_Coberto': 'Valor Coberto (R$)', 'Codigo': 'C√≥digo da Op√ß√£o'},
+        title=f"Top 10 Op√ß√µes mais movimentadas no Preg√£o de {ultima_data}"
     )
     fig_top10.update_traces(texttemplate='R$ %{text:.2f}', textposition='outside')
     st.plotly_chart(fig_top10, use_container_width=True)
