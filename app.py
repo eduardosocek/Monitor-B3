@@ -8,16 +8,6 @@ st.set_page_config(page_title="Monitor B3", layout="wide")
 st.title("🔐 SA INTELIGÊNCIA EM DADOS | B3 MONITOR")
 st.markdown("---")
 
-# --- CONTROLE DE ACESSO ESTÁVEL (Sem text_input para evitar o erro) ---
-# Usamos um botão ou checkbox simples para liberar o acesso sem componentes complexos
-liberado = st.checkbox("🔓 Marque esta caixa para liberar o acesso ao painel de testes")
-
-if not liberado:
-    st.warning("⚠️ **Acesso Restrito:** Marque a caixa acima para carregar o monitor.")
-    st.stop()
-
-st.success("✅ Acesso Liberado com Sucesso!")
-
 # --- DICIONÁRIO DE USUÁRIOS E PLANILHAS ---
 usuarios_planilhas = {
     "Eduardo (Principal)": "1tEjT52xO9lzoBdPE4rXKJyqowM_9Fi3x5bWc2oRw3eI",
