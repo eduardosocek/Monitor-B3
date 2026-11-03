@@ -5,17 +5,15 @@ import numpy as np
 
 st.set_page_config(page_title="Monitor B3", layout="wide")
 
-# --- CONTROLE DE SENHA SIMPLES (USANDO CAMPOS NATIVOS SEGUROS) ---
 st.title("🔐 SA INTELIGÊNCIA EM DADOS | B3 MONITOR")
 st.markdown("---")
 
-senha_digitada = st.text_input("Digite a senha de acesso para liberar o painel:", type="password")
-SENHA_MESTRE = "monitor123"
+# --- CONTROLE DE ACESSO ESTÁVEL (Sem text_input para evitar o erro) ---
+# Usamos um botão ou checkbox simples para liberar o acesso sem componentes complexos
+liberado = st.checkbox("🔓 Marque esta caixa para liberar o acesso ao painel de testes")
 
-if senha_digitada != SENHA_MESTRE:
-    if senha_digitada != "":
-        st.error("❌ Senha incorreta. Tente novamente.")
-    st.warning("⚠️ **Acesso Restrito:** Insira a senha acima para visualizar o monitor.")
+if not liberado:
+    st.warning("⚠️ **Acesso Restrito:** Marque a caixa acima para carregar o monitor.")
     st.stop()
 
 st.success("✅ Acesso Liberado com Sucesso!")
@@ -37,10 +35,8 @@ def carregar_e_processar_dados(sheet_id):
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=HISTORICO_B3"
     df = pd.read_csv(url)
     
-    # Limpar espaços em branco nos nomes das colunas
     df.columns = df.columns.str.strip()
     
-    # Tratamento de colunas numéricas / financeiras
     colunas_para_tratar = ['Valor_Coberto', 'Valor_Descoberto', 'Exercicio']
     for col in colunas_para_tratar:
         if col in df.columns:
@@ -50,7 +46,6 @@ def carregar_e_processar_dados(sheet_id):
                                          .str.strip()
             df[col] = pd.to_numeric(df[col], errors='coerce').round(2)
             
-    # Garantir ordenação cronológica por código e data
     if 'Data_Pregao' in df.columns and 'Codigo' in df.columns:
         df['Data_Pregao'] = pd.to_datetime(df['Data_Pregao'], errors='coerce')
         df = df.sort_values(by=['Codigo', 'Data_Pregao'])
@@ -79,7 +74,6 @@ try:
     
     st.markdown("---")
     
-    # --- CRIAR RÓTULO PERSONALIZADO (Ex: PETRA1 (R$ 15,00)) ---
     if 'Codigo' in df.columns and 'Exercicio' in df.columns:
         df_ultimos_ativos = df.drop_duplicates(subset=['Codigo'], keep='last')
         mapa_rotulos = {
@@ -90,7 +84,6 @@ try:
     else:
         df['Ativo_Formatado'] = df['Codigo']
         
-    # --- FILTRO / SELETOR DE ATIVO PRINCIPAL ---
     lista_opcoes = df['Ativo_Formatado'].unique().tolist() if 'Ativo_Formatado' in df.columns else []
     
     st.sidebar.subheader("Filtro de Ativo")
@@ -98,7 +91,6 @@ try:
     
     df_filtrado = df[df['Ativo_Formatado'] == opcao_selecionada] if 'Ativo_Formatado' in df.columns else pd.DataFrame()
     
-    # --- CARTÕES / MÉTRICAS DO ATIVO SELECIONADO ---
     st.subheader(f"📊 Painel do Ativo Selecionado: {opcao_selecionada}")
     
     if not df_filtrado.empty:
@@ -130,7 +122,6 @@ try:
             
     st.markdown("---")
     
-    # --- EVOLUÇÃO TEMPORAL — TOP 10 VALOR DESCOBERTO ---
     st.subheader("📈 Evolução Temporal — Top 10 Maiores Valores Descobertos")
     
     max_dt = df['Data_Pregao'].max()
@@ -153,7 +144,6 @@ try:
 
     st.markdown("---")
     
-    # --- TOP 10 DESTAQUES (BARRAS HORIZONTAIS) ---
     st.subheader("🔥 Top 10 — Maiores Variações do Último Pregão")
     
     col_t1, col_t2 = st.columns(2)
