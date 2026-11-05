@@ -163,9 +163,9 @@ try:
             color_discrete_map={'Positivo': '#2ecc71', 'Negativo': '#e74c3c'},
             labels={'Variacao_Grafico': 'Variação Direcional (R$)', 'Ativo_Formatado': 'Ativo'}
         )
-        fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='auto')
+        fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='outside')
         fig_fin.update_layout(
-            margin=dict(l=40, r=220, t=30, b=30),  # Margem esquerda compacta e direita bem ampla para os números longos
+            margin=dict(l=180, r=180, t=30, b=30),  # Margens equilibradas e amplas em ambos os lados
             xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black', autorange=True),
             showlegend=False,
             height=480
@@ -208,9 +208,9 @@ try:
             color_discrete_map={'Positivo': '#2ecc71', 'Negativo': '#e74c3c'},
             labels={'Percentual_Grafico': 'Variação Direcional (%)', 'Ativo_Formatado': 'Ativo'}
         )
-        fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='auto')
+        fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='outside')
         fig_pct.update_layout(
-            margin=dict(l=40, r=220, t=30, b=30),  # Margem esquerda compacta e direita bem ampla
+            margin=dict(l=180, r=180, t=30, b=30),  # Margens equilibradas e amplas em ambos os lados
             xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black', autorange=True),
             showlegend=False,
             height=480
