@@ -103,7 +103,7 @@ try:
                 title=f"Evolução Temporal (Valor Descoberto e Strike) — {opcao_selecionada}",
                 labels={'value': 'Valor (R$)', 'Data_Pregao': 'Data do Pregão', 'variable': 'Métrica'}
             )
-            fig_evolucao.update_layout(margin=dict(l=20, r=20, t=50, b=20), xaxis_title="Data do Pregão", yaxis_title="Valor (R$)")
+            fig_evolucao.update_layout(margin=dict(l=20, r=20, t=50, b=20), xaxis_title="Data do Pregão", yaxis_title="Valor (R$)", height=400)
             st.plotly_chart(fig_evolucao, use_container_width=True)
             
     st.markdown("---")
@@ -125,21 +125,22 @@ try:
             title="Evolução Temporal do Valor Descoberto — Top 10 Ativos",
             labels={'Valor_Descoberto': 'Valor Descoberto (R$)', 'Data_Pregao': 'Data do Pregão', 'Ativo_Formatado': 'Ativo'}
         )
-        fig_top10_desc.update_layout(margin=dict(l=20, r=20, t=50, b=20))
+        fig_top10_desc.update_layout(margin=dict(l=20, r=20, t=50, b=20), height=450)
         st.plotly_chart(fig_top10_desc, use_container_width=True)
 
     st.markdown("---")
-    st.markdown("### 🔥 Top 10 — Maiores Variações do Último Pregão (Call vs Put)")
+    st.markdown("### 🔥 Top 10 — Maiores Variações Reais (Call vs Put)")
 
     col_t1, col_t2 = st.columns(2)
 
     with col_t1:
-        st.markdown("**Maiores Variações Financeiras (Call = Positivo / Put = Negativo)**")
+        st.markdown("**Maiores Variações Financeiras (Top 10 Absolutas)**")
         if 'Variacao_Financeira' in df_ultimo.columns and not df_ultimo['Variacao_Financeira'].isna().all():
             df_val_limpo = df_ultimo.dropna(subset=['Variacao_Financeira']).copy()
             
             if 'Tipo' in df_val_limpo.columns:
                 df_val_limpo['Tipo_Upper'] = df_val_limpo['Tipo'].astype(str).str.upper()
+                # Puts ficam negativas no gráfico, Calls ficam positivas
                 df_val_limpo['Variacao_Grafico'] = np.where(
                     df_val_limpo['Tipo_Upper'].str.contains('PUT'),
                     -abs(df_val_limpo['Variacao_Financeira']),
@@ -148,9 +149,9 @@ try:
             else:
                 df_val_limpo['Variacao_Grafico'] = df_val_limpo['Variacao_Financeira']
                 
-            top_neg = df_val_limpo.nsmallest(5, 'Variacao_Grafico')
-            top_pos = df_val_limpo.nlargest(5, 'Variacao_Grafico')
-            top10_fin = pd.concat([top_neg, top_pos]).drop_duplicates().sort_values(by='Variacao_Grafico', ascending=True)
+            # Pega exatamente as 10 maiores variações em termos absolutos (livre, sem travar 5 e 5)
+            df_val_limpo['Abs_Var'] = df_val_limpo['Variacao_Grafico'].abs()
+            top10_fin = df_val_limpo.nlargest(10, 'Abs_Var').sort_values(by='Variacao_Grafico', ascending=True)
             
             fig_fin = px.bar(
                 top10_fin,
@@ -164,15 +165,16 @@ try:
             )
             fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='outside')
             fig_fin.update_layout(
-                margin=dict(l=20, r=100, t=30, b=20),
-                xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black')
+                margin=dict(l=20, r=120, t=30, b=20),
+                xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black'),
+                height=500
             )
             st.plotly_chart(fig_fin, use_container_width=True)
         else:
             st.info("Dados insuficientes para calcular a variação financeira.")
             
     with col_t2:
-        st.markdown("**Maiores Variações Percentuais (Call vs Put)**")
+        st.markdown("**Maiores Variações Percentuais (Top 10 Absolutas)**")
         if 'Variacao_Percentual' in df_ultimo.columns and not df_ultimo['Variacao_Percentual'].isna().all():
             df_pct_limpo = df_ultimo.dropna(subset=['Variacao_Percentual']).copy()
             
@@ -186,9 +188,8 @@ try:
             else:
                 df_pct_limpo['Percentual_Grafico'] = df_pct_limpo['Variacao_Percentual']
                 
-            top_neg_pct = df_pct_limpo.nsmallest(5, 'Percentual_Grafico')
-            top_pos_pct = df_pct_limpo.nlargest(5, 'Percentual_Grafico')
-            top10_pct = pd.concat([top_neg_pct, top_pos_pct]).drop_duplicates().sort_values(by='Percentual_Grafico', ascending=True)
+            df_pct_limpo['Abs_Pct'] = df_pct_limpo['Percentual_Grafico'].abs()
+            top10_pct = df_pct_limpo.nlargest(10, 'Abs_Pct').sort_values(by='Percentual_Grafico', ascending=True)
             
             fig_pct = px.bar(
                 top10_pct,
@@ -202,8 +203,9 @@ try:
             )
             fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='outside')
             fig_pct.update_layout(
-                margin=dict(l=20, r=100, t=30, b=20),
-                xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black')
+                margin=dict(l=20, r=120, t=30, b=20),
+                xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black'),
+                height=500
             )
             st.plotly_chart(fig_pct, use_container_width=True)
         else:
