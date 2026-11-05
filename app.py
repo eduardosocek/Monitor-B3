@@ -103,7 +103,7 @@ try:
                 title=f"Evolução Temporal (Valor Descoberto e Strike) — {opcao_selecionada}",
                 labels={'value': 'Valor (R$)', 'Data_Pregao': 'Data do Pregão', 'variable': 'Métrica'}
             )
-            fig_evolucao.update_layout(margin=dict(l=20, r=20, t=50, b=20), xaxis_title="Data do Pregão", yaxis_title="Valor (R$)", height=400)
+            fig_evolucao.update_layout(margin=dict(l=40, r=40, t=50, b=30), xaxis_title="Data do Pregão", yaxis_title="Valor (R$)", height=400)
             st.plotly_chart(fig_evolucao, use_container_width=True)
             
     st.markdown("---")
@@ -125,14 +125,14 @@ try:
             title="Evolução Temporal do Valor Descoberto — Top 10 Ativos",
             labels={'Valor_Descoberto': 'Valor Descoberto (R$)', 'Data_Pregao': 'Data do Pregão', 'Ativo_Formatado': 'Ativo'}
         )
-        fig_top10_desc.update_layout(margin=dict(l=20, r=20, t=50, b=20), height=450)
+        fig_top10_desc.update_layout(margin=dict(l=40, r=40, t=50, b=30), height=450)
         st.plotly_chart(fig_top10_desc, use_container_width=True)
 
     st.markdown("---")
     st.markdown("### 🔥 Top 10 — Maiores Variações Reais do Último Pregão")
 
     # =========================================================================
-    # GRÁFICO 1: VARIAÇÃO FINANCEIRA (ABAIXO, LARGURA TOTAL)
+    # GRÁFICO 1: VARIAÇÃO FINANCEIRA (LARGURA TOTAL, MARGEM EXPANDIDA)
     # =========================================================================
     st.markdown("#### **Maiores Variações Financeiras (Top 10 Absolutas)**")
     if 'Variacao_Financeira' in df_ultimo.columns and not df_ultimo['Variacao_Financeira'].isna().all():
@@ -151,7 +151,6 @@ try:
         df_val_limpo['Abs_Var'] = df_val_limpo['Variacao_Grafico'].abs()
         top10_fin = df_val_limpo.nlargest(10, 'Abs_Var').sort_values(by='Variacao_Grafico', ascending=True)
         
-        # Atribui cor baseada no sinal (Verde para positivo/Call, Vermelho para negativo/Put)
         top10_fin['Cor_Barra'] = np.where(top10_fin['Variacao_Grafico'] >= 0, 'Positivo', 'Negativo')
         
         fig_fin = px.bar(
@@ -164,12 +163,13 @@ try:
             color_discrete_map={'Positivo': '#2ecc71', 'Negativo': '#e74c3c'},
             labels={'Variacao_Grafico': 'Variação Direcional (R$)', 'Ativo_Formatado': 'Ativo'}
         )
-        fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='outside')
+        # Coloca o texto 'auto' para que valores longos fiquem protegidos dentro/fora sem sumir
+        fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='auto')
         fig_fin.update_layout(
-            margin=dict(l=20, r=120, t=30, b=20),
-            xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black'),
+            margin=dict(l=150, r=180, t=30, b=30),  # Margens generosas nas pontas esquerda e direita
+            xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black', autorange=True),
             showlegend=False,
-            height=450
+            height=480
         )
         st.plotly_chart(fig_fin, use_container_width=True)
     else:
@@ -178,7 +178,7 @@ try:
     st.markdown("---")
 
     # =========================================================================
-    # GRÁFICO 2: VARIAÇÃO PERCENTUAL (ABAIXO, LARGURA TOTAL)
+    # GRÁFICO 2: VARIAÇÃO PERCENTUAL (LARGURA TOTAL, MARGEM EXPANDIDA)
     # =========================================================================
     st.markdown("#### **Maiores Variações Percentuais (Top 10 Absolutas)**")
     if 'Variacao_Percentual' in df_ultimo.columns and not df_ultimo['Variacao_Percentual'].isna().all():
@@ -209,12 +209,12 @@ try:
             color_discrete_map={'Positivo': '#2ecc71', 'Negativo': '#e74c3c'},
             labels={'Percentual_Grafico': 'Variação Direcional (%)', 'Ativo_Formatado': 'Ativo'}
         )
-        fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='outside')
+        fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='auto')
         fig_pct.update_layout(
-            margin=dict(l=20, r=120, t=30, b=20),
-            xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black'),
+            margin=dict(l=150, r=180, t=30, b=30),  # Margens generosas nas pontas esquerda e direita
+            xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black', autorange=True),
             showlegend=False,
-            height=450
+            height=480
         )
         st.plotly_chart(fig_pct, use_container_width=True)
     else:
