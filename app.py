@@ -132,40 +132,48 @@ try:
     st.markdown("### 🔥 Top 10 — Maiores Variações Reais do Último Pregão")
 
     # =========================================================================
-    # GRÁFICO 1: VARIAÇÃO FINANCEIRA (COM ESCALA DINÂMICA CUSTOMIZADA)
+    # GRÁFICO 1: VARIAÇÃO FINANCEIRA (COM TRATAMENTO DE OUTLIER VISUAL)
     # =========================================================================
     st.markdown("#### **Maiores Variações Financeiras (Top 10 Absolutas)**")
     if 'Variacao_Financeira' in df_ultimo.columns and not df_ultimo['Variacao_Financeira'].isna().all():
         df_val_limpo = df_ultimo.dropna(subset=['Variacao_Financeira']).copy()
+        df_val_limpo['Abs_Var'] = df_val_limpo['Variacao_Financeira'].abs()
+        top10_fin = df_val_limpo.nlargest(10, 'Abs_Var').copy()
         
-        if 'Tipo' in df_val_limpo.columns:
-            df_val_limpo['Tipo_Upper'] = df_val_limpo['Tipo'].astype(str).str.upper()
-            df_val_limpo['Variacao_Grafico'] = np.where(
-                df_val_limpo['Tipo_Upper'].str.contains('PUT'),
-                -abs(df_val_limpo['Variacao_Financeira']),
-                abs(df_val_limpo['Variacao_Financeira'])
-            )
-        else:
-            df_val_limpo['Variacao_Grafico'] = df_val_limpo['Variacao_Financeira']
+        # Tratamento inteligente de outlier para o gráfico não ficar esmagado
+        if len(top10_fin) > 1:
+            abs_v = top10_fin['Variacao_Financeira'].abs().sort_values(ascending=False)
+            maior_v = abs_v.iloc[0]
+            segundo_v = abs_v.iloc[1]
             
-        df_val_limpo['Abs_Var'] = df_val_limpo['Variacao_Grafico'].abs()
-        top10_fin = df_val_limpo.nlargest(10, 'Abs_Var').sort_values(by='Variacao_Grafico', ascending=True)
-        
+            if maior_v > (segundo_v * 2.5):
+                # Limita visualmente a barra gigante para equilibrar o gráfico
+                teto_cap = segundo_v * 2.2
+                top10_fin['Variacao_Grafico'] = top10_fin['Variacao_Financeira'].apply(
+                    lambda x: -teto_cap if x < -teto_cap else (teto_cap if x > teto_cap else x)
+                )
+            else:
+                top10_fin['Variacao_Grafico'] = top10_fin['Variacao_Financeira']
+        else:
+            top10_fin['Variacao_Grafico'] = top10_fin['Variacao_Financeira']
+            
+        if 'Tipo' in top10_fin.columns:
+            top10_fin['Tipo_Upper'] = top10_fin['Tipo'].astype(str).str.upper()
+            top10_fin['Variacao_Grafico'] = np.where(
+                top10_fin['Tipo_Upper'].str.contains('PUT'),
+                -abs(top10_fin['Variacao_Grafico']),
+                abs(top10_fin['Variacao_Grafico'])
+            )
+            
+        top10_fin = top10_fin.sort_values(by='Variacao_Grafico', ascending=True)
         top10_fin['Cor_Barra'] = np.where(top10_fin['Variacao_Grafico'] >= 0, 'Positivo', 'Negativo')
-        
-        # Cálculo dinâmico dos limites do eixo X para o gráfico superior respirar perfeitamente
-        min_x = top10_fin['Variacao_Grafico'].min()
-        max_x = top10_fin['Variacao_Grafico'].max()
-        # Adiciona uma margem de respiro proporcional (15% para cada lado)
-        range_min = min_x * 1.15 if min_x < 0 else -1000
-        range_max = max_x * 1.15 if max_x > 0 else 1000
         
         fig_fin = px.bar(
             top10_fin,
             x='Variacao_Grafico',
             y='Ativo_Formatado',
             orientation='h',
-            text='Variacao_Financeira',
+            text='Variacao_Financeira',  # Mantém o número real completo no texto
             color='Cor_Barra',
             color_discrete_map={'Positivo': '#2ecc71', 'Negativo': '#e74c3c'},
             labels={'Variacao_Grafico': 'Variação Direcional (R$)', 'Ativo_Formatado': 'Ativo'}
@@ -173,12 +181,7 @@ try:
         fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='auto')
         fig_fin.update_layout(
             margin=dict(l=100, r=100, t=30, b=30),
-            xaxis=dict(
-                zeroline=True, 
-                zerolinewidth=3, 
-                zerolinecolor='black', 
-                range=[range_min, range_max]  # Escala dinâmica personalizada para alinhar perfeitamente
-            ),
+            xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black', autorange=True),
             showlegend=False,
             height=480
         )
@@ -189,7 +192,7 @@ try:
     st.markdown("---")
 
     # =========================================================================
-    # GRÁFICO 2: VARIAÇÃO PERCENTUAL (MANTÉM O PADRÃO ORIGINAL QUE ESTÁ ÓTIMO)
+    # GRÁFICO 2: VARIAÇÃO PERCENTUAL
     # =========================================================================
     st.markdown("#### **Maiores Variações Percentuais (Top 10 Absolutas)**")
     if 'Variacao_Percentual' in df_ultimo.columns and not df_ultimo['Variacao_Percentual'].isna().all():
