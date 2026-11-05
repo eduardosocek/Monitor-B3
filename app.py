@@ -8,23 +8,21 @@ st.set_page_config(page_title="Monitor B3", layout="wide")
 st.title("🔐 SA INTELIGÊNCIA EM DADOS | B3 MONITOR")
 st.markdown("---")
 
-# --- DICIONÁRIO DE USUÁRIOS E PLANILHAS ---
+# Dicionário de planilhas
 usuarios_planilhas = {
     "Eduardo (Principal)": "1tEjT52xO9lzoBdPE4rXKJyqowM_9Fi3x5bWc2oRw3eI",
     "Usuário 2": "COLOQUE_O_ID_DA_PLANILHA_DO_CLIENTE_2_AQUI",
     "Usuário 3": "COLOQUE_O_ID_DA_PLANILHA_DO_CLIENTE_3_AQUI"
 }
 
-st.sidebar.header("👤 Configurações")
-nome_usuario = st.sidebar.selectbox("Selecione o Usuário:", list(usuarios_planilhas.keys()))
+st.sidebar.markdown("### 👤 Configurações")
+nome_usuario = st.sidebar.radio("Selecione o Usuário:", list(usuarios_planilhas.keys()))
 id_planilha = usuarios_planilhas[nome_usuario]
 
-# Função para carregar e calcular os dados do Google Sheets de forma segura
 @st.cache_data(ttl=300)
 def carregar_e_processar_dados(sheet_id):
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=HISTORICO_B3"
     df = pd.read_csv(url)
-    
     df.columns = df.columns.str.strip()
     
     colunas_para_tratar = ['Valor_Coberto', 'Valor_Descoberto', 'Exercicio']
@@ -52,16 +50,14 @@ def carregar_e_processar_dados(sheet_id):
 
 try:
     df = carregar_e_processar_dados(id_planilha)
-    st.sidebar.success(f"Base carregada para: {nome_usuario}")
+    st.sidebar.success(f"Base carregada: {nome_usuario}")
     
     ultima_data = df['Data_Pregao'].max().strftime('%d/%m/%Y') if 'Data_Pregao' in df.columns and not df['Data_Pregao'].isna().all() else "N/A"
     total_pregoes = df['Data_Pregao'].nunique() if 'Data_Pregao' in df.columns else 0
     
-    col_h1, col_h2, col_h3 = st.columns(3)
-    col_h1.metric("Último Pregão", str(ultima_data))
-    col_h2.metric("Pregões Carregados", str(total_pregoes))
-    col_h3.metric("Status", "Atualizado com sucesso")
-    
+    st.markdown(f"""
+    > **Resumo da Base:** Último Pregão: **{ultima_data}** | Pregões Carregados: **{total_pregoes}** | Status: **Atualizado com Sucesso**
+    """)
     st.markdown("---")
     
     if 'Codigo' in df.columns and 'Exercicio' in df.columns:
@@ -76,27 +72,26 @@ try:
         
     lista_opcoes = df['Ativo_Formatado'].unique().tolist() if 'Ativo_Formatado' in df.columns else []
     
-    st.sidebar.subheader("Filtro de Ativo")
-    opcao_selecionada = st.sidebar.selectbox("Selecione a Opção / Ativo:", lista_opcoes)
+    st.sidebar.markdown("### Filtro de Ativo")
+    opcao_selecionada = st.sidebar.selectbox("Ativo:", lista_opcoes)
     
     df_filtrado = df[df['Ativo_Formatado'] == opcao_selecionada] if 'Ativo_Formatado' in df.columns else pd.DataFrame()
     
-    st.subheader(f"📊 Painel do Ativo Selecionado: {opcao_selecionada}")
+    st.markdown(f"### 📊 Painel do Ativo Selecionado: {opcao_selecionada}")
     
     if not df_filtrado.empty:
         ultimo_registro = df_filtrado.iloc[-1]
-        
         val_coberto = ultimo_registro.get('Valor_Coberto', 0)
         val_descoberto = ultimo_registro.get('Valor_Descoberto', 0)
         exercicio = ultimo_registro.get('Exercicio', 0)
         data_ref = ultimo_registro.get('Data_Pregao')
         data_ref_str = data_ref.strftime('%d/%m/%Y') if pd.notna(data_ref) else 'N/A'
         
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Valor Coberto", f"R$ {val_coberto:,.2f}" if pd.notna(val_coberto) else "R$ 0,00")
-        c2.metric("Valor Descoberto", f"R$ {val_descoberto:,.2f}" if pd.notna(val_descoberto) else "R$ 0,00")
-        c3.metric("Preço de Exercício (Strike)", f"R$ {exercicio:,.2f}" if pd.notna(exercicio) else "R$ 0,00")
-        c4.metric("Data Ref.", data_ref_str)
+        st.markdown(f"""
+        | Valor Coberto | Valor Descoberto | Preço de Exercício (Strike) | Data Ref. |
+        | :--- | :--- | :--- | :--- |
+        | R$ {val_coberto:,.2f} | R$ {val_descoberto:,.2f} | R$ {exercicio:,.2f} | {data_ref_str} |
+        """)
         
         if 'Data_Pregao' in df_filtrado.columns:
             colunas_grafico = [c for c in ['Valor_Descoberto', 'Exercicio'] if c in df_filtrado.columns]
@@ -108,11 +103,12 @@ try:
                 title=f"Evolução Temporal (Valor Descoberto e Strike) — {opcao_selecionada}",
                 labels={'value': 'Valor (R$)', 'Data_Pregao': 'Data do Pregão', 'variable': 'Métrica'}
             )
+            # Ajuste de layout para evitar cortes nas margens e centralizar o zero se necessário
+            fig_evolucao.update_layout(margin=dict(l=20, r=20, t=50, b=20), xaxis_title="Data do Pregão", yaxis_title="Valor (R$)")
             st.plotly_chart(fig_evolucao, use_container_width=True)
             
     st.markdown("---")
-    
-    st.subheader("📈 Evolução Temporal — Top 10 Maiores Valores Descobertos")
+    st.markdown("### 📈 Evolução Temporal — Top 10 Maiores Valores Descobertos")
     
     max_dt = df['Data_Pregao'].max()
     df_ultimo = df[df['Data_Pregao'] == max_dt] if 'Data_Pregao' in df.columns else df
@@ -130,11 +126,11 @@ try:
             title="Evolução Temporal do Valor Descoberto — Top 10 Ativos",
             labels={'Valor_Descoberto': 'Valor Descoberto (R$)', 'Data_Pregao': 'Data do Pregão', 'Ativo_Formatado': 'Ativo'}
         )
+        fig_top10_desc.update_layout(margin=dict(l=20, r=20, t=50, b=20))
         st.plotly_chart(fig_top10_desc, use_container_width=True)
 
     st.markdown("---")
-    
-    st.subheader("🔥 Top 10 — Maiores Variações do Último Pregão")
+    st.markdown("### 🔥 Top 10 — Maiores Variações do Último Pregão (Call / Put)")
     
     col_t1, col_t2 = st.columns(2)
     
@@ -143,6 +139,7 @@ try:
         if 'Variacao_Financeira' in df_ultimo.columns and not df_ultimo['Variacao_Financeira'].isna().all():
             top10_fin = df_ultimo.dropna(subset=['Variacao_Financeira']).sort_values(by='Variacao_Financeira', ascending=True).tail(10)
             
+            # Gráfico com barras direcionadas (positivo para cima/direita, negativo para baixo/esquerda, garantindo o zero no centro)
             fig_fin = px.bar(
                 top10_fin,
                 x='Variacao_Financeira',
@@ -153,7 +150,12 @@ try:
                 color_continuous_scale='RdBu',
                 labels={'Variacao_Financeira': 'Variação (R$)', 'Ativo_Formatado': 'Ativo'}
             )
+            # Força o texto para fora/dentro sem cortar e garante margens seguras
             fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='outside')
+            fig_fin.update_layout(
+                margin=dict(l=20, r=80, t=30, b=20),  # Margem direita maior para o texto do gráfico não cortar
+                xaxis=dict(zeroline=True, zerolinewidth=2, zerolinecolor='gray') # Garante o zero bem visível no centro
+            )
             st.plotly_chart(fig_fin, use_container_width=True)
         else:
             st.info("Dados insuficientes para calcular a variação financeira.")
@@ -174,6 +176,10 @@ try:
                 labels={'Variacao_Percentual': 'Variação (%)', 'Ativo_Formatado': 'Ativo'}
             )
             fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='outside')
+            fig_pct.update_layout(
+                margin=dict(l=20, r=80, t=30, b=20),
+                xaxis=dict(zeroline=True, zerolinewidth=2, zerolinecolor='gray') # Zero centralizado
+            )
             st.plotly_chart(fig_pct, use_container_width=True)
         else:
             st.info("Dados insuficientes para calcular a variação percentual.")
