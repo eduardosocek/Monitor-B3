@@ -132,7 +132,7 @@ try:
     st.markdown("### 🔥 Top 10 — Maiores Variações Reais do Último Pregão")
 
     # =========================================================================
-    # GRÁFICO 1: VARIAÇÃO FINANCEIRA
+    # GRÁFICO 1: VARIAÇÃO FINANCEIRA (COM ESCALA DINÂMICA CUSTOMIZADA)
     # =========================================================================
     st.markdown("#### **Maiores Variações Financeiras (Top 10 Absolutas)**")
     if 'Variacao_Financeira' in df_ultimo.columns and not df_ultimo['Variacao_Financeira'].isna().all():
@@ -153,6 +153,13 @@ try:
         
         top10_fin['Cor_Barra'] = np.where(top10_fin['Variacao_Grafico'] >= 0, 'Positivo', 'Negativo')
         
+        # Cálculo dinâmico dos limites do eixo X para o gráfico superior respirar perfeitamente
+        min_x = top10_fin['Variacao_Grafico'].min()
+        max_x = top10_fin['Variacao_Grafico'].max()
+        # Adiciona uma margem de respiro proporcional (15% para cada lado)
+        range_min = min_x * 1.15 if min_x < 0 else -1000
+        range_max = max_x * 1.15 if max_x > 0 else 1000
+        
         fig_fin = px.bar(
             top10_fin,
             x='Variacao_Grafico',
@@ -163,11 +170,15 @@ try:
             color_discrete_map={'Positivo': '#2ecc71', 'Negativo': '#e74c3c'},
             labels={'Variacao_Grafico': 'Variação Direcional (R$)', 'Ativo_Formatado': 'Ativo'}
         )
-        # 'auto' resolve perfeitamente: barras grandes guardam o texto dentro, barras pequenas colocam o texto fora de forma legível
         fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='auto')
         fig_fin.update_layout(
-            margin=dict(l=180, r=180, t=30, b=30),  # Margens amplas em ambos os lados para garantir visibilidade total
-            xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black', autorange=True),
+            margin=dict(l=100, r=100, t=30, b=30),
+            xaxis=dict(
+                zeroline=True, 
+                zerolinewidth=3, 
+                zerolinecolor='black', 
+                range=[range_min, range_max]  # Escala dinâmica personalizada para alinhar perfeitamente
+            ),
             showlegend=False,
             height=480
         )
@@ -178,7 +189,7 @@ try:
     st.markdown("---")
 
     # =========================================================================
-    # GRÁFICO 2: VARIAÇÃO PERCENTUAL
+    # GRÁFICO 2: VARIAÇÃO PERCENTUAL (MANTÉM O PADRÃO ORIGINAL QUE ESTÁ ÓTIMO)
     # =========================================================================
     st.markdown("#### **Maiores Variações Percentuais (Top 10 Absolutas)**")
     if 'Variacao_Percentual' in df_ultimo.columns and not df_ultimo['Variacao_Percentual'].isna().all():
@@ -211,7 +222,7 @@ try:
         )
         fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='auto')
         fig_pct.update_layout(
-            margin=dict(l=180, r=180, t=30, b=30),  # Margens amplas em ambos os lados
+            margin=dict(l=100, r=100, t=30, b=30),
             xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black', autorange=True),
             showlegend=False,
             height=480
