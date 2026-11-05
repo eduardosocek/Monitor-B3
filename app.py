@@ -129,87 +129,96 @@ try:
         st.plotly_chart(fig_top10_desc, use_container_width=True)
 
     st.markdown("---")
-    st.markdown("### 🔥 Top 10 — Maiores Variações Reais (Call vs Put)")
+    st.markdown("### 🔥 Top 10 — Maiores Variações Reais do Último Pregão")
 
-    col_t1, col_t2 = st.columns(2)
+    # =========================================================================
+    # GRÁFICO 1: VARIAÇÃO FINANCEIRA (ABAIXO, LARGURA TOTAL)
+    # =========================================================================
+    st.markdown("#### **Maiores Variações Financeiras (Top 10 Absolutas)**")
+    if 'Variacao_Financeira' in df_ultimo.columns and not df_ultimo['Variacao_Financeira'].isna().all():
+        df_val_limpo = df_ultimo.dropna(subset=['Variacao_Financeira']).copy()
+        
+        if 'Tipo' in df_val_limpo.columns:
+            df_val_limpo['Tipo_Upper'] = df_val_limpo['Tipo'].astype(str).str.upper()
+            df_val_limpo['Variacao_Grafico'] = np.where(
+                df_val_limpo['Tipo_Upper'].str.contains('PUT'),
+                -abs(df_val_limpo['Variacao_Financeira']),
+                abs(df_val_limpo['Variacao_Financeira'])
+            )
+        else:
+            df_val_limpo['Variacao_Grafico'] = df_val_limpo['Variacao_Financeira']
+            
+        df_val_limpo['Abs_Var'] = df_val_limpo['Variacao_Grafico'].abs()
+        top10_fin = df_val_limpo.nlargest(10, 'Abs_Var').sort_values(by='Variacao_Grafico', ascending=True)
+        
+        # Atribui cor baseada no sinal (Verde para positivo/Call, Vermelho para negativo/Put)
+        top10_fin['Cor_Barra'] = np.where(top10_fin['Variacao_Grafico'] >= 0, 'Positivo', 'Negativo')
+        
+        fig_fin = px.bar(
+            top10_fin,
+            x='Variacao_Grafico',
+            y='Ativo_Formatado',
+            orientation='h',
+            text='Variacao_Financeira',
+            color='Cor_Barra',
+            color_discrete_map={'Positivo': '#2ecc71', 'Negativo': '#e74c3c'},
+            labels={'Variacao_Grafico': 'Variação Direcional (R$)', 'Ativo_Formatado': 'Ativo'}
+        )
+        fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='outside')
+        fig_fin.update_layout(
+            margin=dict(l=20, r=120, t=30, b=20),
+            xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black'),
+            showlegend=False,
+            height=450
+        )
+        st.plotly_chart(fig_fin, use_container_width=True)
+    else:
+        st.info("Dados insuficientes para calcular a variação financeira.")
 
-    with col_t1:
-        st.markdown("**Maiores Variações Financeiras (Top 10 Absolutas)**")
-        if 'Variacao_Financeira' in df_ultimo.columns and not df_ultimo['Variacao_Financeira'].isna().all():
-            df_val_limpo = df_ultimo.dropna(subset=['Variacao_Financeira']).copy()
-            
-            if 'Tipo' in df_val_limpo.columns:
-                df_val_limpo['Tipo_Upper'] = df_val_limpo['Tipo'].astype(str).str.upper()
-                # Puts ficam negativas no gráfico, Calls ficam positivas
-                df_val_limpo['Variacao_Grafico'] = np.where(
-                    df_val_limpo['Tipo_Upper'].str.contains('PUT'),
-                    -abs(df_val_limpo['Variacao_Financeira']),
-                    abs(df_val_limpo['Variacao_Financeira'])
-                )
-            else:
-                df_val_limpo['Variacao_Grafico'] = df_val_limpo['Variacao_Financeira']
-                
-            # Pega exatamente as 10 maiores variações em termos absolutos (livre, sem travar 5 e 5)
-            df_val_limpo['Abs_Var'] = df_val_limpo['Variacao_Grafico'].abs()
-            top10_fin = df_val_limpo.nlargest(10, 'Abs_Var').sort_values(by='Variacao_Grafico', ascending=True)
-            
-            fig_fin = px.bar(
-                top10_fin,
-                x='Variacao_Grafico',
-                y='Ativo_Formatado',
-                orientation='h',
-                text='Variacao_Financeira',
-                color='Variacao_Grafico',
-                color_continuous_scale='RdBu',
-                labels={'Variacao_Grafico': 'Variação Direcional (R$)', 'Ativo_Formatado': 'Ativo'}
+    st.markdown("---")
+
+    # =========================================================================
+    # GRÁFICO 2: VARIAÇÃO PERCENTUAL (ABAIXO, LARGURA TOTAL)
+    # =========================================================================
+    st.markdown("#### **Maiores Variações Percentuais (Top 10 Absolutas)**")
+    if 'Variacao_Percentual' in df_ultimo.columns and not df_ultimo['Variacao_Percentual'].isna().all():
+        df_pct_limpo = df_ultimo.dropna(subset=['Variacao_Percentual']).copy()
+        
+        if 'Tipo' in df_pct_limpo.columns:
+            df_pct_limpo['Tipo_Upper'] = df_pct_limpo['Tipo'].astype(str).str.upper()
+            df_pct_limpo['Percentual_Grafico'] = np.where(
+                df_pct_limpo['Tipo_Upper'].str.contains('PUT'),
+                -abs(df_pct_limpo['Variacao_Percentual']),
+                abs(df_pct_limpo['Variacao_Percentual'])
             )
-            fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='outside')
-            fig_fin.update_layout(
-                margin=dict(l=20, r=120, t=30, b=20),
-                xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black'),
-                height=500
-            )
-            st.plotly_chart(fig_fin, use_container_width=True)
         else:
-            st.info("Dados insuficientes para calcular a variação financeira.")
+            df_pct_limpo['Percentual_Grafico'] = df_pct_limpo['Variacao_Percentual']
             
-    with col_t2:
-        st.markdown("**Maiores Variações Percentuais (Top 10 Absolutas)**")
-        if 'Variacao_Percentual' in df_ultimo.columns and not df_ultimo['Variacao_Percentual'].isna().all():
-            df_pct_limpo = df_ultimo.dropna(subset=['Variacao_Percentual']).copy()
-            
-            if 'Tipo' in df_pct_limpo.columns:
-                df_pct_limpo['Tipo_Upper'] = df_pct_limpo['Tipo'].astype(str).str.upper()
-                df_pct_limpo['Percentual_Grafico'] = np.where(
-                    df_pct_limpo['Tipo_Upper'].str.contains('PUT'),
-                    -abs(df_pct_limpo['Variacao_Percentual']),
-                    abs(df_pct_limpo['Variacao_Percentual'])
-                )
-            else:
-                df_pct_limpo['Percentual_Grafico'] = df_pct_limpo['Variacao_Percentual']
-                
-            df_pct_limpo['Abs_Pct'] = df_pct_limpo['Percentual_Grafico'].abs()
-            top10_pct = df_pct_limpo.nlargest(10, 'Abs_Pct').sort_values(by='Percentual_Grafico', ascending=True)
-            
-            fig_pct = px.bar(
-                top10_pct,
-                x='Percentual_Grafico',
-                y='Ativo_Formatado',
-                orientation='h',
-                text='Variacao_Percentual',
-                color='Percentual_Grafico',
-                color_continuous_scale='Greens',
-                labels={'Percentual_Grafico': 'Variação Direcional (%)', 'Ativo_Formatado': 'Ativo'}
-            )
-            fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='outside')
-            fig_pct.update_layout(
-                margin=dict(l=20, r=120, t=30, b=20),
-                xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black'),
-                height=500
-            )
-            st.plotly_chart(fig_pct, use_container_width=True)
-        else:
-            st.info("Dados insuficientes para calcular a variação percentual.")
+        df_pct_limpo['Abs_Pct'] = df_pct_limpo['Percentual_Grafico'].abs()
+        top10_pct = df_pct_limpo.nlargest(10, 'Abs_Pct').sort_values(by='Percentual_Grafico', ascending=True)
+        
+        top10_pct['Cor_Barra'] = np.where(top10_pct['Percentual_Grafico'] >= 0, 'Positivo', 'Negativo')
+        
+        fig_pct = px.bar(
+            top10_pct,
+            x='Percentual_Grafico',
+            y='Ativo_Formatado',
+            orientation='h',
+            text='Variacao_Percentual',
+            color='Cor_Barra',
+            color_discrete_map={'Positivo': '#2ecc71', 'Negativo': '#e74c3c'},
+            labels={'Percentual_Grafico': 'Variação Direcional (%)', 'Ativo_Formatado': 'Ativo'}
+        )
+        fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='outside')
+        fig_pct.update_layout(
+            margin=dict(l=20, r=120, t=30, b=20),
+            xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black'),
+            showlegend=False,
+            height=450
+        )
+        st.plotly_chart(fig_pct, use_container_width=True)
+    else:
+        st.info("Dados insuficientes para calcular a variação percentual.")
 
 except Exception as e:
     st.error(f"Erro ao processar os dados: {e}")
