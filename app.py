@@ -132,7 +132,7 @@ try:
     st.markdown("### 🔥 Top 10 — Maiores Variações Reais do Último Pregão")
 
     # =========================================================================
-    # GRÁFICO 1: VARIAÇÃO FINANCEIRA (LARGURA TOTAL, MARGEM EXPANDIDA)
+    # GRÁFICO 1: VARIAÇÃO FINANCEIRA
     # =========================================================================
     st.markdown("#### **Maiores Variações Financeiras (Top 10 Absolutas)**")
     if 'Variacao_Financeira' in df_ultimo.columns and not df_ultimo['Variacao_Financeira'].isna().all():
@@ -163,10 +163,9 @@ try:
             color_discrete_map={'Positivo': '#2ecc71', 'Negativo': '#e74c3c'},
             labels={'Variacao_Grafico': 'Variação Direcional (R$)', 'Ativo_Formatado': 'Ativo'}
         )
-        # Coloca o texto 'auto' para que valores longos fiquem protegidos dentro/fora sem sumir
         fig_fin.update_traces(texttemplate='R$ %{text:,.2f}', textposition='auto')
         fig_fin.update_layout(
-            margin=dict(l=150, r=180, t=30, b=30),  # Margens generosas nas pontas esquerda e direita
+            margin=dict(l=40, r=220, t=30, b=30),  # Margem esquerda compacta e direita bem ampla para os números longos
             xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black', autorange=True),
             showlegend=False,
             height=480
@@ -178,7 +177,7 @@ try:
     st.markdown("---")
 
     # =========================================================================
-    # GRÁFICO 2: VARIAÇÃO PERCENTUAL (LARGURA TOTAL, MARGEM EXPANDIDA)
+    # GRÁFICO 2: VARIAÇÃO PERCENTUAL
     # =========================================================================
     st.markdown("#### **Maiores Variações Percentuais (Top 10 Absolutas)**")
     if 'Variacao_Percentual' in df_ultimo.columns and not df_ultimo['Variacao_Percentual'].isna().all():
@@ -211,7 +210,7 @@ try:
         )
         fig_pct.update_traces(texttemplate='%{text:,.2f}%', textposition='auto')
         fig_pct.update_layout(
-            margin=dict(l=150, r=180, t=30, b=30),  # Margens generosas nas pontas esquerda e direita
+            margin=dict(l=40, r=220, t=30, b=30),  # Margem esquerda compacta e direita bem ampla
             xaxis=dict(zeroline=True, zerolinewidth=3, zerolinecolor='black', autorange=True),
             showlegend=False,
             height=480
